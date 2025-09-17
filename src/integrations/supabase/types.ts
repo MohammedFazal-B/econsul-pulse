@@ -14,7 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      sentiment_analysis: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          full_comment: string
+          keywords: string[]
+          sentiment_analysis: string
+          summary: string
+        }
+        Insert: {
+          comment_id?: string
+          created_at?: string | null
+          full_comment: string
+          keywords: string[]
+          sentiment_analysis: string
+          summary: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          full_comment?: string
+          keywords?: string[]
+          sentiment_analysis?: string
+          summary?: string
+        }
+        Relationships: []
+      }
+      user_submissions: {
+        Row: {
+          comment: string
+          created_at: string | null
+          district: string
+          email: string
+          id: string
+          name: string
+          state: string
+          subject: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string | null
+          district: string
+          email: string
+          id?: string
+          name: string
+          state: string
+          subject: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string | null
+          district?: string
+          email?: string
+          id?: string
+          name?: string
+          state?: string
+          subject?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
