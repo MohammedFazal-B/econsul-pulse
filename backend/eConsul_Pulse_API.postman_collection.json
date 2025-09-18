@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "eConsul Pulse API",
+    "description": "API endpoints for eConsul Pulse feedback submission system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/health",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Schema Example", 
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/schema-example",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "schema-example"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Feedback - Valid",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"district\": \"Downtown\",\n  \"state\": \"California\",\n  \"subject\": \"Public Transportation\",\n  \"comment\": \"The bus service needs improvement in our area. The buses are often late and overcrowded during peak hours.\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/submit-feedback",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "submit-feedback"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Feedback - Road Infrastructure",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Alice Johnson\",\n  \"email\": \"alice@test.com\",\n  \"district\": \"North District\",\n  \"state\": \"Texas\",\n  \"subject\": \"Road Infrastructure\",\n  \"comment\": \"The roads in our neighborhood have many potholes that need urgent repair.\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/submit-feedback",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "submit-feedback"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Feedback - Public Safety",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Bob Smith\",\n  \"email\": \"bob.smith@gmail.com\",\n  \"district\": \"Central\",\n  \"state\": \"New York\",\n  \"subject\": \"Public Safety\",\n  \"comment\": \"We need better street lighting in the downtown area for safety at night.\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/submit-feedback",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "submit-feedback"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Feedback - Invalid Email (Should Fail)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"invalid-email\",\n  \"district\": \"Test District\",\n  \"state\": \"Test State\",\n  \"subject\": \"Test Subject\",\n  \"comment\": \"Test comment\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/submit-feedback",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "submit-feedback"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Feedback - Missing Field (Should Fail)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"district\": \"Test District\",\n  \"state\": \"Test State\",\n  \"subject\": \"Test Subject\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/submit-feedback",
+          "protocol": "http",
+          "host": ["127", "0", "0", "1"],
+          "port": "8000",
+          "path": ["api", "submit-feedback"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
