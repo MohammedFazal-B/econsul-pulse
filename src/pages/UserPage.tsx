@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle, ArrowLeft, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { mockLLMAnalysis } from "@/utils/mockLLM";
+import analyzeComment from "@/utils/mockLLM";
 import { useToast } from "@/hooks/use-toast";
 
 const UserPage = () => {
@@ -36,47 +36,74 @@ const UserPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    try {
-      // Save form data to user_submissions table
-      const { error: submissionError } = await supabase
-        .from('user_submissions')
-        .insert([formData]);
-
-      if (submissionError) throw submissionError;
-
-      // Generate mock LLM analysis
-      const analysis = mockLLMAnalysis(formData.comment);
-
-      // Save analysis to sentiment_analysis table
-      const { error: analysisError } = await supabase
-        .from('sentiment_analysis')
-        .insert([{
-          comment_id: analysis.comment_id,
+  
+    
+  try {
+    // Generate LLM analysis and WAIT for the result
+    const analysis = await analyzeComment(formData.comment);
+    console.log('LLM analysis result:', analysis);
+    if (!analysis.summary || typeof analysis.summary !== 'string' || !analysis.summary.trim()) {
+      toast({
+        title: "Submission Failed",
+        description: "LLM failed to generate a summary. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    // Step 1: Insert into sentiment_analysis and get comment_id
+    const { data: sentimentData, error: analysisError } = await supabase
+      .from("sentiment_analysis")
+      .insert([
+        {
           full_comment: formData.comment,
-          summary: analysis.summary,
-          sentiment_analysis: analysis.sentiment_analysis,
-          keywords: analysis.keywords
-        }]);
+          summary: analysis.summary || 'No summary provided',
+          sentiment_analysis: analysis.sentiment,
+          keywords: analysis.keywords,
+        },
+      ])
+      .select("comment_id")
+      .single();
 
-      if (analysisError) throw analysisError;
-
+    if (analysisError) throw analysisError;
+    const commentId = sentimentData.comment_id;
+  
+      // Step 2: Insert into user_submissions with FK comment_id
+      const { error: submissionError } = await supabase
+        .from("user_submissions")
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            district: formData.district,
+            state: formData.state,
+            subject: formData.subject,
+            comment: formData.comment,
+            comment_id: commentId, // foreign key reference
+          },
+        ]);
+  
+      if (submissionError) throw submissionError;
+  
+      // Success
       setIsSubmitted(true);
       toast({
         title: "Submission Successful",
         description: "Your consultation has been submitted successfully.",
       });
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
       toast({
         title: "Submission Failed",
-        description: "There was an error submitting your consultation. Please try again.",
+        description:
+          "There was an error submitting your consultation. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

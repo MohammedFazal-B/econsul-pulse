@@ -127,15 +127,15 @@ const AdminPage = () => {
   const totalSubmissions = submissions.length;
   
   const sentimentData = submissions.reduce((acc, submission) => {
-    const sentiment = submission.sentiment_analysis.toLowerCase();
-    acc[sentiment] = (acc[sentiment] || 0) + 1;
+    const sentiment_analysis = submission.sentiment_analysis.toLowerCase();
+    acc[sentiment_analysis] = (acc[sentiment_analysis] || 0) + 1;
     return acc;
   }, {} as { [key: string]: number });
 
-  const pieChartData = Object.entries(sentimentData).map(([sentiment, count]) => ({
-    name: sentiment.charAt(0).toUpperCase() + sentiment.slice(1),
+  const pieChartData = Object.entries(sentimentData).map(([sentiment_analysis, count]) => ({
+    name: sentiment_analysis.charAt(0).toUpperCase() + sentiment_analysis.slice(1),
     value: count,
-    fill: sentiment === 'positive' ? '#10B981' : sentiment === 'negative' ? '#EF4444' : '#60A5FA'
+    fill: sentiment_analysis === 'positive' ? '#10B981' : sentiment_analysis === 'negative' ? '#EF4444' : '#60A5FA'
   }));
 
   const subjectData = userSubmissions.reduce((acc, submission) => {
@@ -513,7 +513,7 @@ const AdminPage = () => {
                                     View Details
                                   </button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden">
+                                <DialogContent className="max-w-[85%] max-h-[95%] h-[85%] overflow-hidden">
                                   <DialogHeader className="border-b pb-4">
                                     <DialogTitle className="text-xl font-semibold text-gray-900">
                                       Consultation Details
