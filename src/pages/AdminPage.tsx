@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, TrendingUp, MessageSquare, Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import WordCloudComponent from "@/components/WordCloudComponent";
+import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
+import { ArrowLeft, Calendar, Eye, Filter, MapPin, Minus, Search, SortAsc, SortDesc, ThumbsDown, ThumbsUp, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface SubmissionData {
   comment_id: string;
@@ -34,6 +37,13 @@ const AdminPage = () => {
   const [userSubmissions, setUserSubmissions] = useState<UserSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPersonalInfo, setShowPersonalInfo] = useState<{ [key: string]: boolean }>({});
+  
+  // Filter and sort states
+  const [dateSort, setDateSort] = useState<'asc' | 'desc' | 'none'>('desc');
+  const [sentimentFilter, setSentimentFilter] = useState<string>('all');
+  const [districtFilter, setDistrictFilter] = useState<string>('all');
+  const [stateFilter, setStateFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     fetchSubmissions();
@@ -73,6 +83,46 @@ const AdminPage = () => {
     }));
   };
 
+  // Get unique values for filter options
+  const uniqueDistricts = [...new Set(userSubmissions.map(u => u.district))].sort();
+  const uniqueStates = [...new Set(userSubmissions.map(u => u.state))].sort();
+
+  // Filter and sort submissions
+  const filteredAndSortedSubmissions = submissions
+    .filter(submission => {
+      const userSubmission = userSubmissions.find(u => u.comment === submission.full_comment);
+      
+      // Search filter
+      if (searchQuery && !submission.summary.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // Sentiment filter
+      if (sentimentFilter !== 'all' && submission.sentiment_analysis.toLowerCase() !== sentimentFilter) {
+        return false;
+      }
+      
+      // District filter
+      if (districtFilter !== 'all' && userSubmission?.district !== districtFilter) {
+        return false;
+      }
+      
+      // State filter
+      if (stateFilter !== 'all' && userSubmission?.state !== stateFilter) {
+        return false;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      if (dateSort === 'asc') {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (dateSort === 'desc') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      return 0;
+    });
+
   // Analytics calculations
   const totalSubmissions = submissions.length;
   
@@ -85,7 +135,7 @@ const AdminPage = () => {
   const pieChartData = Object.entries(sentimentData).map(([sentiment, count]) => ({
     name: sentiment.charAt(0).toUpperCase() + sentiment.slice(1),
     value: count,
-    fill: sentiment === 'positive' ? '#10B981' : sentiment === 'negative' ? '#EF4444' : '#6B7280'
+    fill: sentiment === 'positive' ? '#10B981' : sentiment === 'negative' ? '#EF4444' : '#60A5FA'
   }));
 
   const subjectData = userSubmissions.reduce((acc, submission) => {
@@ -105,7 +155,7 @@ const AdminPage = () => {
   const chartConfig = {
     positive: { label: "Positive", color: "#10B981" },
     negative: { label: "Negative", color: "#EF4444" },
-    neutral: { label: "Neutral", color: "#6B7280" },
+    neutral: { label: "Neutral", color: "#60A5FA" },
   };
 
   if (loading) {
@@ -138,8 +188,8 @@ const AdminPage = () => {
             </p>
           </div>
 
-          {/* Analytics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Sentiment Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
@@ -153,30 +203,47 @@ const AdminPage = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-green-200 bg-green-50/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Positive Feedback</CardTitle>
-                <TrendingUp className="h-4 w-4 text-success" />
+                <CardTitle className="text-sm font-medium text-green-700">Positive Feedback</CardTitle>
+                <ThumbsUp className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-success">
-                  {totalSubmissions > 0 ? Math.round(((sentimentData.positive || 0) / totalSubmissions) * 100) : 0}%
+                <div className="text-2xl font-bold text-green-600">
+                  {sentimentData.positive || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {sentimentData.positive || 0} positive responses
+                <p className="text-xs text-green-600">
+                  {totalSubmissions > 0 ? Math.round(((sentimentData.positive || 0) / totalSubmissions) * 100) : 0}% of total
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-red-200 bg-red-50/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unique Subjects</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-red-700">Negative Feedback</CardTitle>
+                <ThumbsDown className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{Object.keys(subjectData).length}</div>
-                <p className="text-xs text-muted-foreground">
-                  Different topics discussed
+                <div className="text-2xl font-bold text-red-600">
+                  {sentimentData.negative || 0}
+                </div>
+                <p className="text-xs text-red-600">
+                  {totalSubmissions > 0 ? Math.round(((sentimentData.negative || 0) / totalSubmissions) * 100) : 0}% of total
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-blue-700">Neutral Feedback</CardTitle>
+                <Minus className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {sentimentData.neutral || 0}
+                </div>
+                <p className="text-xs text-blue-600">
+                  {totalSubmissions > 0 ? Math.round(((sentimentData.neutral || 0) / totalSubmissions) * 100) : 0}% of total
                 </p>
               </CardContent>
             </Card>
@@ -252,115 +319,364 @@ const AdminPage = () => {
             </CardContent>
           </Card>
 
-          {/* Submissions Table */}
+          {/* Filter and Sort Section */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Filter & Sort Submissions
+              </CardTitle>
+              <CardDescription>Filter and sort consultation submissions by various criteria</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                {/* Date Sort */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Sort by Date</label>
+                  <Select value={dateSort} onValueChange={(value: 'asc' | 'desc' | 'none') => setDateSort(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sort by date" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">
+                        <div className="flex items-center gap-2">
+                          <SortDesc className="w-4 h-4" />
+                          Descending
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="asc">
+                        <div className="flex items-center gap-2">
+                          <SortAsc className="w-4 h-4" />
+                          Ascending
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="none">No Sorting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Sentiment Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Sentiment</label>
+                  <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by sentiment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sentiments</SelectItem>
+                      <SelectItem value="positive">Positive</SelectItem>
+                      <SelectItem value="negative">Negative</SelectItem>
+                      <SelectItem value="neutral">Neutral</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* District Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">District</label>
+                  <Select value={districtFilter} onValueChange={setDistrictFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by district" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Districts</SelectItem>
+                      {uniqueDistricts.map(district => (
+                        <SelectItem key={district} value={district}>{district}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* State Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">State</label>
+                  <Select value={stateFilter} onValueChange={setStateFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All States</SelectItem>
+                      {uniqueStates.map(state => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Search */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700">Search Summary</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search in summaries..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Results Count */}
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{filteredAndSortedSubmissions.length}</span> of <span className="font-semibold">{submissions.length}</span> submissions
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Submissions Table */}
           <Card>
             <CardHeader>
               <CardTitle>Recent Submissions</CardTitle>
-              <CardDescription>Latest consultation submissions with sentiment analysis</CardDescription>
+              <CardDescription>Latest consultation submissions with sentiment analysis and user details</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {submissions.map((submission, index) => {
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-medium">Date</th>
+                      <th className="text-left p-3 font-medium">Sentiment</th>
+                      <th className="text-left p-3 font-medium">Summarized Comments</th>
+                      <th className="text-left p-3 font-medium">Keywords</th>
+                      <th className="text-left p-3 font-medium">Full Comments</th>
+                      <th className="text-left p-3 font-medium">Show Info</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAndSortedSubmissions.map((submission, index) => {
                   const userSubmission = userSubmissions.find(u => 
                     u.comment === submission.full_comment
                   );
-                  const isPersonalVisible = showPersonalInfo[submission.comment_id];
                   
                   return (
-                    <motion.div
+                        <motion.tr
                       key={submission.comment_id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="border rounded-lg p-4 space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Badge 
-                            variant={
-                              submission.sentiment_analysis.toLowerCase() === 'positive' 
-                                ? 'default' 
-                                : submission.sentiment_analysis.toLowerCase() === 'negative' 
-                                  ? 'destructive' 
-                                  : 'secondary'
-                            }
-                          >
-                            {submission.sentiment_analysis}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(submission.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {userSubmission && (
-                          <button
-                            onClick={() => togglePersonalInfo(submission.comment_id)}
-                            className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground"
-                          >
-                            {isPersonalVisible ? (
-                              <>
-                                <EyeOff className="w-4 h-4" />
-                                <span>Hide Info</span>
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="w-4 h-4" />
-                                <span>Show Info</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                      
-                      {userSubmission && isPersonalVisible && (
-                        <div className="bg-muted/50 rounded p-3 space-y-2">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium">Name:</span> {userSubmission.name}
+                          transition={{ delay: index * 0.05 }}
+                          className="border-b hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="p-3">
+                            <div className="text-sm text-muted-foreground">
+                              {new Date(submission.created_at).toLocaleDateString()}
                             </div>
-                            <div>
-                              <span className="font-medium">Email:</span> {userSubmission.email}
+                          </td>
+                          <td className="p-3">
+                            <Badge 
+                              className={`${
+                                submission.sentiment_analysis.toLowerCase() === 'positive' 
+                                  ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100 hover:text-green-800' 
+                                  : submission.sentiment_analysis.toLowerCase() === 'negative' 
+                                    ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100 hover:text-red-800' 
+                                    : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 hover:text-blue-800'
+                              }`}
+                            >
+                              {submission.sentiment_analysis}
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <div className="text-sm text-muted-foreground max-w-md">
+                              {submission.summary}
                             </div>
-                            <div>
-                              <span className="font-medium">District:</span> {userSubmission.district}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex flex-wrap gap-1 border border-gray-200 rounded-md p-2 bg-gray-50">
+                              {submission.keywords.slice(0, 3).map((keyword, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs border-gray-300">
+                                  {keyword}
+                                </Badge>
+                              ))}
+                              {submission.keywords.length > 3 && (
+                                <Badge variant="outline" className="text-xs border-gray-300">
+                                  +{submission.keywords.length - 3}
+                                </Badge>
+                              )}
                             </div>
-                            <div>
-                              <span className="font-medium">State:</span> {userSubmission.state}
+                          </td>
+                          <td className="p-3">
+                            <div className="text-sm text-muted-foreground max-w-xs truncate">
+                              {submission.full_comment.length > 50 
+                                ? submission.full_comment.substring(0, 50) + '...' 
+                                : submission.full_comment}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            {userSubmission ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <button className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 rounded-md shadow-sm hover:shadow transition-all duration-200">
+                                    <Eye className="w-3 h-3" />
+                                    View Details
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden">
+                                  <DialogHeader className="border-b pb-4">
+                                    <DialogTitle className="text-xl font-semibold text-gray-900">
+                                      Consultation Details
+                                    </DialogTitle>
+                                  </DialogHeader>
+                                  
+                                  <div className="grid grid-cols-3 gap-8 h-[65vh] overflow-hidden">
+                                    {/* Left Panel - User Details & Full Comments */}
+                                    <div className="col-span-2 space-y-4 overflow-y-auto pr-4">
+                                      {/* User Profile Card */}
+                                      <div className="relative bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 border border-indigo-200 rounded-2xl p-6 shadow-lg overflow-hidden">
+                                        {/* Unique Background Elements */}
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-full -translate-y-12 translate-x-12 opacity-40"></div>
+                                        <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-full translate-y-10 -translate-x-10 opacity-40"></div>
+                                        <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-30"></div>
+                                        
+                                        <div className="relative z-10">
+                                          <div className="flex items-center gap-5 mb-6">
+                                            <div className="relative group">
+                                              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center text-white font-bold text-2xl shadow-xl group-hover:scale-105 transition-transform duration-300">
+                                                {userSubmission.name.charAt(0).toUpperCase()}
+                                              </div>
+                                              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-lg opacity-30 -z-10"></div>
+                                            </div>
+                                            <div className="flex-1">
+                                              <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1">
+                                                {userSubmission.name}
+                                              </h3>
+                                              <p className="text-sm text-gray-600 mb-3">{userSubmission.email}</p>
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-pulse"></div>
+                                                <span className="text-xs text-gray-500 font-medium">Consultation Participant</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 gap-4">
+                                            <div className="relative group">
+                                              <div className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-indigo-100 shadow-sm group-hover:shadow-md transition-all duration-300">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                                  <MapPin className="w-5 h-5 text-blue-600" />
+                                                </div>
+                                                <div className="flex-1">
+                                                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Location</p>
+                                                  <p className="text-sm text-gray-900 font-semibold">{userSubmission.district}, {userSubmission.state}</p>
+                                                </div>
+                                                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                              </div>
+                                            </div>
+                                            
+                                            <div className="relative group">
+                                              <div className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-purple-100 shadow-sm group-hover:shadow-md transition-all duration-300">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                                  <Calendar className="w-5 h-5 text-purple-600" />
+                                                </div>
+                                                <div className="flex-1">
+                                                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Submitted</p>
+                                                  <p className="text-sm text-gray-900 font-semibold">
+                                                    {new Date(submission.created_at).toLocaleDateString('en-US', {
+                                                      month: 'short',
+                                                      day: 'numeric',
+                                                      year: 'numeric'
+                                                    })}
+                                                  </p>
+                                                </div>
+                                                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Subject Card */}
+                                      <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm">
+                                        <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Subject</h4>
+                                        <p className="text-gray-900 leading-relaxed">{userSubmission.subject}</p>
+                                      </div>
+
+                                      {/* Full Comments Card */}
+                                      <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm">
+                                        <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Full Comment</h4>
+                                        <div className="bg-gray-50 rounded-md p-4">
+                                          <p className="text-gray-700 leading-relaxed">{submission.full_comment}</p>
+                                        </div>
                             </div>
                           </div>
-                          <div>
-                            <span className="font-medium text-sm">Subject:</span> {userSubmission.subject}
-                          </div>
+
+                                    {/* Right Panel - Sentiment, Summary & Keywords */}
+                                    <div className="col-span-1 space-y-4 overflow-y-auto">
+                                      {/* Sentiment Analysis Card */}
+                                      <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm">
+                                        <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Sentiment</h4>
+                                        <div className="text-center">
+                                          <Badge 
+                                            className={`px-4 py-2 text-sm font-medium ${
+                                              submission.sentiment_analysis.toLowerCase() === 'positive' 
+                                                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-50 hover:text-green-700' 
+                                                : submission.sentiment_analysis.toLowerCase() === 'negative' 
+                                                  ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-50 hover:text-red-700' 
+                                                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+                                            }`}
+                                          >
+                                            {submission.sentiment_analysis}
+                                          </Badge>
+                                        </div>
                         </div>
-                      )}
-                      
-                      <div>
-                        <h4 className="font-medium mb-2">Summary</h4>
-                        <p className="text-sm text-muted-foreground">{submission.summary}</p>
+
+                                      {/* Summary Card */}
+                                      <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm">
+                                        <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Summary</h4>
+                                        <p className="text-gray-700 text-sm leading-relaxed">{submission.summary}</p>
                       </div>
                       
-                      <div>
-                        <h4 className="font-medium mb-2">Keywords</h4>
-                        <div className="flex flex-wrap gap-2">
+                                      {/* Keywords Card */}
+                                      <div className="bg-white border border-gray-100 rounded-lg p-5 shadow-sm">
+                                        <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Keywords</h4>
+                                        <div className="flex flex-wrap gap-1.5">
                           {submission.keywords.map((keyword, idx) => (
-                            <Badge key={idx} variant="outline">
+                                            <Badge key={idx} variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-700 px-2 py-1">
                               {keyword}
                             </Badge>
                           ))}
                         </div>
                       </div>
                       
-                      <details className="mt-3">
-                        <summary className="cursor-pointer text-sm font-medium text-primary hover:underline">
-                          View Full Comment
-                        </summary>
-                        <p className="mt-2 text-sm text-muted-foreground p-3 bg-muted/30 rounded">
-                          {submission.full_comment}
-                        </p>
-                      </details>
-                    </motion.div>
+                                      {/* Additional Info Card */}
+                                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-5 shadow-sm">
+                                        <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">Analysis</h4>
+                                        <div className="space-y-2">
+                                          <div className="flex justify-between items-center text-xs">
+                                            <span className="text-gray-600">Confidence</span>
+                                            <span className="font-medium text-gray-900">High</span>
+                                          </div>
+                                          <div className="flex justify-between items-center text-xs">
+                                            <span className="text-gray-600">Processing</span>
+                                            <span className="font-medium text-gray-900">Complete</span>
+                                          </div>
+                                          <div className="flex justify-between items-center text-xs">
+                                            <span className="text-gray-600">Keywords Found</span>
+                                            <span className="font-medium text-gray-900">{submission.keywords.length}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">No user data</span>
+                            )}
+                          </td>
+                        </motion.tr>
                   );
                 })}
+                  </tbody>
+                </table>
               </div>
+              
+              {filteredAndSortedSubmissions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  {submissions.length === 0 ? 'No submissions found' : 'No submissions match your filters'}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
